@@ -1,0 +1,11 @@
+project: default
+source:
+  repoURL: 'https://github.com/SkylarHoughtonGithub/shoutsky-containers.git'
+  path: kubernetes/manifests/application
+  targetRevision: HEAD
+destination:
+  server: 'https://kubernetes.default.svc'
+  namespace: tetris
+syncPolicy:
+  syncOptions:
+    - CreateNamespace=true
