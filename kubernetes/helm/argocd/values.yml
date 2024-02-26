@@ -7,7 +7,7 @@ configs:
 controller:
   replicas: 1
 global:
-  domain: argocd.shoutsky.com
+  domain: argocd.iamshoutsky.com
 redis-ha:
   enabled: true
 repoServer:

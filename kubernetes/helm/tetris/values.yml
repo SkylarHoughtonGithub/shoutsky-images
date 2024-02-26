@@ -1,0 +1,11 @@
+argoCD:
+  namespace: argocd
+image:
+  repository: avian19/tetrisv1
+  tag: latest
+  pullPolicy: IfNotPresent
+service:
+  type: LoadBalancer
+  port: 80
+replicaCount: 1
+

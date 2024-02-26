@@ -1,11 +1,18 @@
-project: default
-source:
-  repoURL: 'https://github.com/SkylarHoughtonGithub/shoutsky-containers.git'
-  path: kubernetes/manifests/application
-  targetRevision: HEAD
-destination:
-  server: 'https://kubernetes.default.svc'
+apiVersion: argoproj.io/v1alpha1
+kind: Application
+metadata:
+  name: tetris
   namespace: tetris
-syncPolicy:
-  syncOptions:
+spec:
+  destination:
+    server: 'https://kubernetes.default.svc'
+    namespace: tetris
+  project: sandbox
+  source:
+  repoURL: 'https://github.com/SkylarHoughtonGithub/shoutsky-containers.git'
+  path: kubernetes/manifests/applications/tetris
+  targetRevision: HEAD
+  syncPolicy:
+    automated: {}
+    syncOptions:
     - CreateNamespace=true
