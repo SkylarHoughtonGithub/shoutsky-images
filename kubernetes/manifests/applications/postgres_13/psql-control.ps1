@@ -1,13 +1,19 @@
 # Define kubectl function and alias
-function kubectl { minikube kubectl -- $args }
-New-Alias k kubectl
 
 # Define the paths to your YAML files
 $pvcPath = "pvc.yml"
 $secretPath = "secret.yml"
 $deploymentPath = "deployment.yml"
 $servicePath = "service.yml"
+function kubectl { minikube kubectl -- $args }
+New-Alias k kubectl
 
+function init {
+    Write-Host "Preparing env..."
+    minikube stop
+    minikube start
+    Write-Host "env started."
+}
 function apply {
     Write-Host "Creating PostgreSQL resources..."
     k apply -f $pvcPath
@@ -44,7 +50,8 @@ function refresh {
 function Show-Usage {
     Write-Host "Usage: .\psql-control.ps1 <command>"
     Write-Host "Commands:"
-    Write-Host "  init    - Initialize the Kubernetes environment"
+    Write-Host "  init    - Prepare dev psql environment."
+    Write-Host "  create  - Create PostgreSQL resources"
     Write-Host "  create  - Create PostgreSQL resources"
     Write-Host "  destroy - Destroy PostgreSQL resources"
     Write-Host "  refresh - Destroy and Create PostgreSQL resources"

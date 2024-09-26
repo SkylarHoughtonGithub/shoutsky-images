@@ -22,7 +22,7 @@ spec:
             - containerPort: 5432
           env:
             - name: POSTGRES_DB
-              value: mydb
+              value: bookstore
             - name: POSTGRES_USER
               value: admin
             - name: POSTGRES_PASSWORD
