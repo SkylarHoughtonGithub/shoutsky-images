@@ -6,7 +6,7 @@ $secretPath = "secret.yml"
 $deploymentPath = "deployment.yml"
 $servicePath = "service.yml"
 function kubectl { minikube kubectl -- $args }
-New-Alias k kubectl
+if(!(Test-Path alias:k)) {New-Alias k kubectl}
 
 function init {
     Write-Host "Preparing env..."
@@ -20,6 +20,30 @@ function apply {
     k apply -f $secretPath
     k apply -f $deploymentPath
     k apply -f $servicePath
+    $podName = k get pods -l app=postgres -o jsonpath="{.items[0].metadata.name}"
+    if ( -not $podName) {
+        Write-Host "No postgres pods found"
+        exit 1
+    }
+    $podNamespace = k get pods -l app=postgres -o jsonpath="{.items[0].metadata.namespace}"
+    $podPort = k get pods -l app=postgres -o jsonpath="{.items[0].spec.containers[0].ports[*].containerPort}"
+    Write-Host "Setting up port forward"
+    sleep 1
+    if ($LASTEXITCODE -ne 0) {
+        Write-Host "port forward failed."
+        exit 1
+    }
+    Start-Process kubectl -ArgumentList  "port-forward -n $podNamespace $podName $podPort`:$podport" -NoNewWindow
+
+    Write-Host "Testing port connection"
+    $connectionTest = Test-NetConnection -ComputerName localhost -Port $podPort
+    if ($connectionTest.TcpTestSucceeded) {
+        Write-Host "Successfully connected to port $podPort."
+    } 
+    else {
+        Write-Host "Failed to connect to port $podPort."
+    }
+
     Write-Host "PostgreSQL resources created."
 }
 
@@ -34,16 +58,10 @@ function destroy {
 
 function refresh {
     Write-Host "Destroying PostgreSQL resources..."
-    k delete -f $servicePath
-    k delete -f $deploymentPath
-    k delete -f $secretPath
-    k delete -f $pvcPath
+    destroy
     Write-Host "PostgreSQL resources destroyed."
     Write-Host "Creating PostgreSQL resources..."
-    k apply -f $pvcPath
-    k apply -f $secretPath
-    k apply -f $deploymentPath
-    k apply -f $servicePath
+    apply
     Write-Host "PostgreSQL resources created."
 }
 
