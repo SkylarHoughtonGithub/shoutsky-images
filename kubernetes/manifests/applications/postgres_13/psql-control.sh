@@ -21,22 +21,22 @@ init() {
 
 apply() {
     echo "Creating PostgreSQL resources..."
-    k apply -f "$pvcPath"
-    k apply -f "$secretPath"
-    k apply -f "$deploymentPath"
-    k apply -f "$servicePath"
+    kubectl apply -f "$pvcPath"
+    kubectl apply -f "$secretPath"
+    kubectl apply -f "$deploymentPath"
+    kubectl apply -f "$servicePath"
     
-    # podName=$(k get pods -l app=postgres -o jsonpath="{.items[0].metadata.name}")
+    # podName=$(kubectl get pods -l app=postgres -o jsonpath="{.items[0].metadata.name}")
     # if [ -z "$podName" ]; then
     #     echo "No postgres pods found"
     #     exit 1
     # fi
-    # podNamespace=$(k get pods -l app=postgres -o jsonpath="{.items[0].metadata.namespace}")
-    # podPort=$(k get pods -l app=postgres -o jsonpath="{.items[0].spec.containers[0].ports[*].containerPort}")
+    # podNamespace=$(kubectl get pods -l app=postgres -o jsonpath="{.items[0].metadata.namespace}")
+    # podPort=$(kubectl get pods -l app=postgres -o jsonpath="{.items[0].spec.containers[0].ports[*].containerPort}")
     
     # echo "Setting up port forward"
     # sleep 1
-    # k port-forward -n "$podNamespace" "$podName" "$podPort:$podPort" &
+    # kubectl port-forward -n "$podNamespace" "$podName" "$podPort:$podPort" &
     
     # echo "Testing port connection"
     # if nc -z localhost "$podPort" 2>/dev/null; then
@@ -50,10 +50,10 @@ apply() {
 
 destroy() {
     echo "Destroying PostgreSQL resources..."
-    k delete -f "$servicePath"
-    k delete -f "$deploymentPath"
-    k delete -f "$secretPath"
-    k delete -f "$pvcPath"
+    kubectl delete -f "$servicePath"
+    kubectl delete -f "$deploymentPath"
+    kubectl delete -f "$secretPath"
+    kubectl delete -f "$pvcPath"
     echo "PostgreSQL resources destroyed."
 }
 
