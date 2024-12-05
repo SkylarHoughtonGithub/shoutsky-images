@@ -14,12 +14,7 @@ function init {
     minikube start
     Write-Host "env started."
 }
-function apply {
-    Write-Host "Creating PostgreSQL resources..."
-    k apply -f $pvcPath
-    k apply -f $secretPath
-    k apply -f $deploymentPath
-    k apply -f $servicePath
+function port-forward {
     $podName = k get pods -l app=postgres -o jsonpath="{.items[0].metadata.name}"
     if ( -not $podName) {
         Write-Host "No postgres pods found"
@@ -43,6 +38,16 @@ function apply {
     else {
         Write-Host "Failed to connect to port $podPort."
     }
+}
+function apply {
+    Write-Host "Creating PostgreSQL resources..."
+    k apply -f $pvcPath
+    k apply -f $secretPath
+    k apply -f $deploymentPath
+    k apply -f $servicePath
+
+    #TODO: add positional argument support to optionally setup port forwarding, toggle function here for now.
+    # port-forward
 
     Write-Host "PostgreSQL resources created."
 }

@@ -1,0 +1,20 @@
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: go-book-chameleon
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: go-book-chameleon
+  template:
+    metadata:
+      labels:
+        app: go-book-chameleon
+    spec:
+      containers:
+      - name: go-book-chameleon
+        image: skylarhoughtongithub/go-book-chameleon:main
+        ports:
+        - containerPort: 3000

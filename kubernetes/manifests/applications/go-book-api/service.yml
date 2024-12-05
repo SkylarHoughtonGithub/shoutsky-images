@@ -1,0 +1,13 @@
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: go-book-chameleon-service
+spec:
+  type: LoadBalancer
+  selector:
+    app: go-book-chameleon
+  ports:
+  - protocol: TCP
+    port: 8080                
+    targetPort: 8080

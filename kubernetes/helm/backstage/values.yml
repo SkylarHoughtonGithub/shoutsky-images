@@ -1,0 +1,35 @@
+apiVersion: argoproj.io/v1alpha1
+kind: Application
+metadata:
+  name: backstage
+  namespace: argocd
+spec:
+  project: default
+  source:
+    chart: backstage
+    repoURL: https://backstage.github.io/charts
+    targetRevision: 1.0.0  # Replace with latest version
+    helm:
+      values: |
+        backstage:
+          image:
+            tag: latest  # Specify the version you want
+          ingress:
+            enabled: true
+            className: nginx
+            host: backstage.example.com  # Replace with your domain
+          postgresql:
+            enabled: true
+            auth:
+              database: backstage
+              username: backstage
+              password: changeme  # Replace with secure password
+  destination:
+    server: https://kubernetes.default.svc
+    namespace: backstage
+  syncPolicy:
+    automated:
+      prune: true
+      selfHeal: true
+    syncOptions:
+      - CreateNamespace=true
