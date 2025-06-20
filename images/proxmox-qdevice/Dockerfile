@@ -7,14 +7,23 @@ RUN apt-get update && \
     && apt-get clean \
     && rm -rf /var/lib/apt/lists/*
 
-# Create qnetd user and directories
+# Create qnetd user and directories  
 RUN useradd -r -s /bin/false -d /var/lib/corosync qnetd && \
-    mkdir -p /etc/corosync/qnetd/nssdb && \
+    mkdir -p /etc/corosync/qnetd && \
     chown -R qnetd:qnetd /etc/corosync
 
-# Remove existing NSS database and initialize new one
-RUN rm -rf /etc/corosync/qnetd/nssdb/* && \
-    corosync-qnetd-certutil -i
+# Create startup script
+RUN echo '#!/bin/bash\n\
+# Initialize NSS database if it does not exist\n\
+if [ ! -f /etc/corosync/qnetd/nssdb/cert9.db ]; then\n\
+    echo "Initializing NSS database..."\n\
+    corosync-qnetd-certutil -i\n\
+fi\n\
+\n\
+# Start qnetd\n\
+echo "Starting corosync-qnetd..."\n\
+exec corosync-qnetd -f' > /start-qnetd.sh && \
+    chmod +x /start-qnetd.sh
 
 # Expose QDevice port
 EXPOSE 5403
@@ -23,5 +32,5 @@ EXPOSE 5403
 HEALTHCHECK --interval=30s --timeout=10s --start-period=5s --retries=3 \
     CMD netstat -ln | grep :5403 || exit 1
 
-# Start qnetd
-CMD ["corosync-qnetd", "-f"]
+# Start with our script
+CMD ["/start-qnetd.sh"]
