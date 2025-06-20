@@ -30,7 +30,7 @@ EXPOSE 5403
 
 # Health check
 HEALTHCHECK --interval=30s --timeout=10s --start-period=5s --retries=3 \
-    CMD netstat -ln | grep :5403 || exit 1
+    CMD pgrep corosync-qnetd || exit 1
 
 # Start with our script
 CMD ["/start-qnetd.sh"]
