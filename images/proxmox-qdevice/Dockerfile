@@ -12,8 +12,9 @@ RUN useradd -r -s /bin/false -d /var/lib/corosync qnetd && \
     mkdir -p /etc/corosync/qnetd/nssdb && \
     chown -R qnetd:qnetd /etc/corosync
 
-# Initialize NSS database
-RUN corosync-qnetd-certutil -i
+# Remove existing NSS database and initialize new one
+RUN rm -rf /etc/corosync/qnetd/nssdb/* && \
+    corosync-qnetd-certutil -i
 
 # Expose QDevice port
 EXPOSE 5403
