@@ -28,7 +28,3 @@ docker tag ${ECR_REPOSITORY}:${IMAGE_TAG} ${AWS_ACCOUNT_ID}.dkr.ecr.${AWS_REGION
 # Push to ECR
 echo "📤 Pushing image to ECR..."
 docker push ${AWS_ACCOUNT_ID}.dkr.ecr.${AWS_REGION}.amazonaws.com/${ECR_REPOSITORY}:${IMAGE_TAG}
-
-# Update task definition to use the ECR image
-echo "📝 Updating task definition..."
-sed -i "s|proxmox-qdevice:latest|${AWS_ACCOUNT_ID}.dkr.ecr.${AWS_REGION}.amazonaws.com/${ECR_REPOSITORY}:${IMAGE_TAG}|g" main.tf
