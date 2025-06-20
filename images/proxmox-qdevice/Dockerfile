@@ -1,4 +1,3 @@
-# Dockerfile
 FROM debian:bullseye-slim
 
 # Install corosync-qnetd
@@ -8,12 +7,13 @@ RUN apt-get update && \
     && apt-get clean \
     && rm -rf /var/lib/apt/lists/*
 
-# Create qnetd user
-RUN useradd -r -s /bin/false -d /var/lib/corosync qnetd
+# Create qnetd user and directories
+RUN useradd -r -s /bin/false -d /var/lib/corosync qnetd && \
+    mkdir -p /etc/corosync/qnetd/nssdb && \
+    chown -R qnetd:qnetd /etc/corosync
 
-# Create necessary directories
-RUN mkdir -p /etc/corosync/qnetd \
-    && chown -R qnetd:qnetd /etc/corosync/qnetd
+# Initialize NSS database
+RUN corosync-qnetd-certutil -i
 
 # Expose QDevice port
 EXPOSE 5403
