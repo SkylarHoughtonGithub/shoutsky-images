@@ -1,0 +1,66 @@
+---
+# Deployment for the DNS controller
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: mikrotik-dns-controller
+  namespace: kube-system
+  labels:
+    app: mikrotik-dns-controller
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: mikrotik-dns-controller
+  template:
+    metadata:
+      labels:
+        app: mikrotik-dns-controller
+    spec:
+      serviceAccountName: dns-controller
+      containers:
+      - name: dns-controller
+        image: python:3.11-slim
+        command: ["/bin/bash"]
+        args:
+          - -c
+          - |
+            pip install -r /app/requirements.txt
+            python /app/update-dns.py
+        env:
+        - name: MIKROTIK_HOST
+          valueFrom:
+            secretKeyRef:
+              name: mikrotik-credentials
+              key: MIKROTIK_HOST
+        - name: MIKROTIK_USER
+          valueFrom:
+            secretKeyRef:
+              name: mikrotik-credentials
+              key: MIKROTIK_USER
+        - name: MIKROTIK_PASS
+          valueFrom:
+            secretKeyRef:
+              name: mikrotik-credentials
+              key: MIKROTIK_PASS
+        - name: LOAD_BALANCER_IP
+          valueFrom:
+            secretKeyRef:
+              name: mikrotik-credentials
+              key: LOAD_BALANCER_IP
+        volumeMounts:
+        - name: scripts
+          mountPath: /app
+        resources:
+          requests:
+            memory: "64Mi"
+            cpu: "50m"
+          limits:
+            memory: "128Mi"
+            cpu: "100m"
+      volumes:
+      - name: scripts
+        configMap:
+          name: mikrotik-dns-updater
+          defaultMode: 0755
+      restartPolicy: Always
