@@ -1,0 +1,86 @@
+name: Build and Push Images to ECR
+
+on:
+  push:
+    branches: [ main, develop ]
+    paths: [ 'images/**' ]
+  pull_request:
+    branches: [ main ]
+    paths: [ 'images/**' ]
+
+env:
+  AWS_REGION: us-east-2
+  ECR_REGISTRY_PREFIX: shoutsky
+
+jobs:
+  detect-changes:
+    name: Detect Changed Images
+    runs-on: ubuntu-latest
+    outputs:
+      matrix: ${{ steps.changes.outputs.matrix }}
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v4
+      with:
+        fetch-depth: 0
+
+    - name: Detect changed images
+      id: changes
+      run: |
+        if [ "${{ github.event_name }}" == "pull_request" ]; then
+          CHANGED_DIRS=$(git diff --name-only origin/${{ github.base_ref }}..HEAD | grep '^images/' | cut -d'/' -f1-2 | sort -u)
+        else
+          CHANGED_DIRS=$(git diff --name-only HEAD~1..HEAD | grep '^images/' | cut -d'/' -f1-2 | sort -u)
+        fi
+        
+        if [ -z "$CHANGED_DIRS" ]; then
+          CHANGED_DIRS=$(find images -name "Dockerfile" -type f | xargs dirname)
+        fi
+        
+        MATRIX_JSON=$(echo "$CHANGED_DIRS" | jq -R -s -c 'split("\n") | map(select(length > 0)) | map({image: ., name: (split("/")[1])})')
+        echo "matrix=$MATRIX_JSON" >> $GITHUB_OUTPUT
+
+  build-and-push:
+    name: Build and Push
+    needs: detect-changes
+    if: needs.detect-changes.outputs.matrix != '[]'
+    runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        include: ${{ fromJson(needs.detect-changes.outputs.matrix) }}
+    
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v4
+
+    - name: Configure AWS credentials
+      uses: aws-actions/configure-aws-credentials@v4
+      with:
+        aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
+        aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+        aws-region: ${{ env.AWS_REGION }}
+
+    - name: Login to Amazon ECR
+      id: login-ecr
+      uses: aws-actions/amazon-ecr-login@v2
+
+    - name: Build and push image
+      env:
+        ECR_REGISTRY: ${{ steps.login-ecr.outputs.registry }}
+        IMAGE_NAME: ${{ matrix.name }}
+        IMAGE_PATH: ${{ matrix.image }}
+        IMAGE_TAG: ${{ github.sha }}
+      run: |
+        FULL_REPO="$ECR_REGISTRY/$ECR_REGISTRY_PREFIX-$IMAGE_NAME"
+        
+        # Build and push with SHA tag
+        docker build -t $FULL_REPO:$IMAGE_TAG $IMAGE_PATH
+        docker push $FULL_REPO:$IMAGE_TAG
+        
+        # Also tag as latest for main branch
+        if [ "${{ github.ref }}" = "refs/heads/main" ]; then
+          docker tag $FULL_REPO:$IMAGE_TAG $FULL_REPO:latest
+          docker push $FULL_REPO:latest
+        fi
+        
+        echo "✅ Pushed: $FULL_REPO:$IMAGE_TAG"
