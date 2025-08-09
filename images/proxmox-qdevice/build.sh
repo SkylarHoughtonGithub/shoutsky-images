@@ -1,6 +1,6 @@
 #!/bin/bash
 set -e
-
+#
 # Configuration
 AWS_REGION="us-east-2"
 AWS_ACCOUNT_ID=$(aws sts get-caller-identity --query Account --output text)
