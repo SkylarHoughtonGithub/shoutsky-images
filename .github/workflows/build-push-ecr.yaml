@@ -65,6 +65,25 @@ jobs:
       id: login-ecr
       uses: aws-actions/amazon-ecr-login@v2
 
+    - name: Check for pre-build script
+      id: check-prebuild
+      run: |
+        if [ -f "${{ matrix.image }}/pre-build.sh" ]; then
+          echo "prebuild_exists=true" >> $GITHUB_OUTPUT
+          echo "📋 Found pre-build.sh in ${{ matrix.image }}"
+        else
+          echo "prebuild_exists=false" >> $GITHUB_OUTPUT
+          echo "ℹ️  No pre-build.sh found in ${{ matrix.image }}"
+        fi
+
+    - name: Run pre-build script
+      if: steps.check-prebuild.outputs.prebuild_exists == 'true'
+      working-directory: ${{ matrix.image }}
+      run: |
+        echo "🔧 Running pre-build script..."
+        chmod +x pre-build.sh
+        ./pre-build.sh
+
     - name: Build and push image
       env:
         ECR_REGISTRY: ${{ steps.login-ecr.outputs.registry }}
