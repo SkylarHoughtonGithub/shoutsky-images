@@ -1,75 +1,22 @@
-# Dockerfile
-FROM node:20-bookworm-slim AS packages
+FROM node:20-bookworm-slim
 
-WORKDIR /app
-
-# Enable Corepack for Yarn 4.x support
-RUN corepack enable
-
-COPY package.json yarn.lock ./
-COPY packages packages
-
-# Comment this out if you don't have any internal plugins
-# COPY plugins plugins
-
-RUN find packages \! -name "*.ts" -type f | xargs rm -f
-RUN yarn install --frozen-lockfile --production --network-timeout 300000
-
-FROM node:20-bookworm-slim AS build
-
-# Enable Corepack for Yarn 4.x support
-RUN corepack enable
+# Set Python interpreter for `node-gyp` to use
+ENV PYTHON=/usr/bin/python3
 
 # Install isolate-vm dependencies, these are needed by the @backstage/plugin-scaffolder-backend.
 RUN --mount=type=cache,target=/var/cache/apt,sharing=locked \
     --mount=type=cache,target=/var/lib/apt,sharing=locked \
     apt-get update && \
     apt-get install -y --no-install-recommends python3 g++ build-essential && \
-    yarn config set python /usr/bin/python3
+    rm -rf /var/lib/apt/lists/*
 
 # Install sqlite3 dependencies. You can skip this if you don't use sqlite3 in the image,
 # in which case you should also move better-sqlite3 to "devDependencies" in package.json.
 RUN --mount=type=cache,target=/var/cache/apt,sharing=locked \
     --mount=type=cache,target=/var/lib/apt,sharing=locked \
     apt-get update && \
-    apt-get install -y --no-install-recommends libsqlite3-dev
-
-USER node
-WORKDIR /app
-
-COPY --from=packages --chown=node:node /app .
-
-# Comment this out if you don't have any internal plugins
-# COPY --chown=node:node plugins plugins
-
-COPY --chown=node:node packages packages
-COPY --chown=node:node app-config*.yaml ./
-COPY --chown=node:node tsconfig.json package.json yarn.lock ./
-
-ENV NODE_ENV=development
-
-RUN yarn install --frozen-lockfile --network-timeout 300000
-
-RUN yarn tsc
-RUN yarn build:backend
-
-FROM node:20-bookworm-slim
-
-# Enable Corepack for Yarn 4.x support
-RUN corepack enable
-
-# Install isolate-vm dependencies, these are needed by the @backstage/plugin-scaffolder-backend.
-RUN --mount=type=cache,target=/var/cache/apt,sharing=locked \
-    --mount=type=cache,target=/var/lib/apt,sharing=locked \
-    apt-get update && \
-    apt-get install -y --no-install-recommends python3 g++ build-essential
-
-# Install sqlite3 dependencies. You can skip this if you don't use sqlite3 in the image,
-# in which case you should also move better-sqlite3 to "devDependencies" in package.json.
-RUN --mount=type=cache,target=/var/cache/apt,sharing=locked \
-    --mount=type=cache,target=/var/lib/apt,sharing=locked \
-    apt-get update && \
-    apt-get install -y --no-install-recommends libsqlite3-dev
+    apt-get install -y --no-install-recommends libsqlite3-dev && \
+    rm -rf /var/lib/apt/lists/*
 
 # From here on we use the least-privileged `node` user to run the backend.
 USER node
@@ -79,17 +26,31 @@ USER node
 # If this occurs, then ensure BuildKit is enabled (`DOCKER_BUILDKIT=1`) so the app dir is correctly created as `node`.
 WORKDIR /app
 
-# Copy the install dependencies from the build stage and context
-COPY --from=build --chown=node:node /app/yarn.lock /app/package.json /app/
-COPY --from=build --chown=node:node /app/node_modules/ /app/node_modules/
-COPY --from=build --chown=node:node /app/packages/ /app/packages/
+# Copy files needed by Yarn
+COPY --chown=node:node .yarn ./.yarn
+COPY --chown=node:node .yarnrc.yml ./
+COPY --chown=node:node backstage.json ./
 
-# Comment this out if you don't have any internal plugins
-# COPY --from=build --chown=node:node /app/plugins/ /app/plugins/
-
-# Copy any other files that we need at runtime
-COPY --chown=node:node app-config*.yaml ./
-
+# This switches many Node.js dependencies to production mode.
 ENV NODE_ENV=production
 
-CMD ["node", "packages/backend", "--config", "app-config.yaml"]
+# This disables node snapshot for Node 20 to work with the Scaffolder
+ENV NODE_OPTIONS="--no-node-snapshot"
+
+# Copy repo skeleton first, to avoid unnecessary docker cache invalidation.
+# The skeleton contains the package.json of each package in the monorepo,
+# and along with yarn.lock and the root package.json, that's enough to run yarn install.
+COPY --chown=node:node yarn.lock package.json packages/backend/dist/skeleton.tar.gz ./
+RUN tar xzf skeleton.tar.gz && rm skeleton.tar.gz
+
+RUN --mount=type=cache,target=/home/node/.cache/yarn,sharing=locked,uid=1000,gid=1000 \
+    yarn workspaces focus --all --production && rm -rf "$(yarn cache clean)"
+
+# This will include the examples, if you don't need these simply remove this line
+COPY --chown=node:node examples ./examples
+
+# Then copy the rest of the backend bundle, along with any other files we might want.
+COPY --chown=node:node packages/backend/dist/bundle.tar.gz app-config*.yaml ./
+RUN tar xzf bundle.tar.gz && rm bundle.tar.gz
+
+CMD ["node", "packages/backend", "--config", "app-config.yaml", "--config", "app-config.production.yaml"]
