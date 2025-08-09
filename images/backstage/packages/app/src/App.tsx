@@ -1,5 +1,4 @@
 // packages/app/src/App.tsx
-import React from 'react';
 import { Route } from 'react-router-dom';
 import { apiDocsPlugin, ApiExplorerPage } from '@backstage/plugin-api-docs';
 import {
