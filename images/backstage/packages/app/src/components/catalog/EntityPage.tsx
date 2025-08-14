@@ -58,7 +58,11 @@ import {
   isKubernetesAvailable,
 } from '@backstage/plugin-kubernetes';
 
-import { EntityArgoCDContent } from '@roadiehq/backstage-plugin-argo-cd';
+import { 
+  EntityArgoCDOverviewCard,
+  EntityArgoCDHistoryCard,
+  isArgocdAvailable 
+} from '@roadiehq/backstage-plugin-argo-cd';
 
 const techdocsContent = (
   <EntityTechdocsContent>
@@ -69,9 +73,16 @@ const techdocsContent = (
 );
 
 const cicdContent = (
-  // This is an example of how you can implement your company's logic in entity page.
-  // You can for example enforce that all components of type 'service' should use GitHubActions
   <EntitySwitch>
+    {/* ArgoCD History Card */}
+    <EntitySwitch.Case if={isArgocdAvailable}>
+      <Grid container spacing={3}>
+        <Grid item xs={12}>
+          <EntityArgoCDHistoryCard />
+        </Grid>
+      </Grid>
+    </EntitySwitch.Case>
+
     {/*
       Here you can add support for different CI/CD services, for example
       using @backstage-community/plugin-github-actions as follows:
@@ -79,6 +90,7 @@ const cicdContent = (
         <EntityGithubActionsContent />
       </EntitySwitch.Case>
      */}
+    
     <EntitySwitch.Case>
       <EmptyState
         title="No CI/CD available for this entity"
@@ -142,6 +154,15 @@ const overviewContent = (
     <Grid item md={8} xs={12}>
       <EntityHasSubcomponentsCard variant="gridItem" />
     </Grid>
+
+    {/* Add ArgoCD Overview Card */}
+    <EntitySwitch>
+      <EntitySwitch.Case if={isArgocdAvailable}>
+        <Grid item md={6} xs={12}>
+          <EntityArgoCDOverviewCard />
+        </Grid>
+      </EntitySwitch.Case>
+    </EntitySwitch>
   </Grid>
 );
 
@@ -161,10 +182,6 @@ const serviceEntityPage = (
       if={isKubernetesAvailable}
     >
       <EntityKubernetesContent />
-    </EntityLayout.Route>
-
-    <EntityLayout.Route path="/argocd" title="ArgoCD">
-      <EntityArgoCDContent />
     </EntityLayout.Route>
 
     <EntityLayout.Route path="/api" title="API">
